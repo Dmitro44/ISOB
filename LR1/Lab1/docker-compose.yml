@@ -1,0 +1,29 @@
+version: "3.8"
+services:
+  h1:
+    container_name: h1
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    image: isob_lab1:latest
+    command: sleep infinity
+    networks:
+      labnet:
+        ipv4_address: 10.10.5.10
+  h2:
+    container_name: h2
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    image: isob_lab1:latest
+    command: sleep infinity
+    networks:
+      labnet:
+        ipv4_address: 10.10.5.11
+
+networks:
+  labnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.5.0/24
