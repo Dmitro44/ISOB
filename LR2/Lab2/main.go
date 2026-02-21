@@ -95,24 +95,31 @@ func Vigenere(str []rune, key []rune, decrypt bool) []rune {
 
 func main() {
 	var fileToRead string
-	var decrypt bool
+	var res []rune
 
 	var choice byte
 	for {
-		fmt.Println("Choose crypt or decrypt:")
-		fmt.Println("1. Crypt")
-		fmt.Println("2. Decrypt")
-		fmt.Println("3. Exit")
+		decrypt := false
+		for {
+			fmt.Println("Choose crypt or decrypt:")
+			fmt.Println("1. Crypt")
+			fmt.Println("2. Decrypt")
+			fmt.Println("3. Exit")
 
-		fmt.Scan(&choice)
-		switch choice {
-		case 1:
-			fmt.Println("Enter name of file which contains text to crypt:")
-		case 2:
-			fmt.Println("Enter name of file which contains text to decrypt:")
-			decrypt = true
-		case 3:
-			return
+			fmt.Scan(&choice)
+			switch choice {
+			case 1:
+				fmt.Println("Enter name of file which contains text to crypt:")
+			case 2:
+				fmt.Println("Enter name of file which contains text to decrypt:")
+				decrypt = true
+			case 3:
+				return
+			default:
+				fmt.Println("Incorrect choice")
+				continue
+			}
+			break
 		}
 		fmt.Scan(&fileToRead)
 
@@ -126,36 +133,40 @@ func main() {
 		if err != nil {
 			fmt.Printf("error reading file: %s", err)
 		}
-		input := []rune(string(content))
 		file.Close()
+		input := []rune(string(content))
 
-		fmt.Println("Choose cipher type: ")
-		fmt.Println("1. Caesar")
-		fmt.Println("2. Vigenere")
-		fmt.Scan(&choice)
+		for {
+			fmt.Println("Choose cipher type: ")
+			fmt.Println("1. Caesar")
+			fmt.Println("2. Vigenere")
+			fmt.Scan(&choice)
 
-		var res []rune
-
-		switch choice {
-		case 1:
-			fmt.Println("Enter key (positive number):")
-			var key int
-			fmt.Scan(&key)
-			if decrypt {
-				key = -key
+			switch choice {
+			case 1:
+				fmt.Println("Enter key (positive number):")
+				var key int
+				fmt.Scan(&key)
+				if decrypt {
+					key = -key
+				}
+				res = Caesar(input, key)
+			case 2:
+				fmt.Println("Enter key word:")
+				var key string
+				fmt.Scan(&key)
+				res = Vigenere(input, []rune(key), decrypt)
+			default:
+				fmt.Println("Incorrect choice")
+				continue
 			}
-			res = Caesar(input, key)
-		case 2:
-			fmt.Println("Enter key word:")
-			var key string
-			fmt.Scan(&key)
-			res = Vigenere(input, []rune(key), decrypt)
+			break
 		}
 
-		err = os.WriteFile("result.txt", []byte(string(res)), os.ModeAppend)
+		err = os.WriteFile(fileToRead, []byte(string(res)), os.ModeAppend)
 		if err != nil {
 			fmt.Printf("error writing file: %s", err)
 		}
-		fmt.Println("Operation completed. Result stored in result.txt")
+		fmt.Printf("Operation completed. Result stored in %s\n", fileToRead)
 	}
 }
