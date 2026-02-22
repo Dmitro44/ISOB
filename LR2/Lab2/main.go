@@ -101,15 +101,15 @@ func main() {
 	for {
 		decrypt := false
 		for {
-			fmt.Println("Choose crypt or decrypt:")
-			fmt.Println("1. Crypt")
+			fmt.Println("Choose encrypt or decrypt:")
+			fmt.Println("1. Encrypt")
 			fmt.Println("2. Decrypt")
 			fmt.Println("3. Exit")
 
 			fmt.Scan(&choice)
 			switch choice {
 			case 1:
-				fmt.Println("Enter name of file which contains text to crypt:")
+				fmt.Println("Enter name of file which contains text to encrypt:")
 			case 2:
 				fmt.Println("Enter name of file which contains text to decrypt:")
 				decrypt = true
@@ -125,19 +125,21 @@ func main() {
 
 		file, err := os.Open(fileToRead)
 		if err != nil {
-			fmt.Printf("error opening file: %s", err)
-			return
+			fmt.Printf("error opening file: %s\n", err)
+			continue
 		}
 
 		content, err := io.ReadAll(file)
 		if err != nil {
-			fmt.Printf("error reading file: %s", err)
+			fmt.Printf("error reading file: %s\n", err)
+			file.Close()
+			continue
 		}
 		file.Close()
 		input := []rune(string(content))
 
 		for {
-			fmt.Println("Choose cipher type: ")
+			fmt.Println("\nChoose cipher type: ")
 			fmt.Println("1. Caesar")
 			fmt.Println("2. Vigenere")
 			fmt.Scan(&choice)
@@ -165,7 +167,7 @@ func main() {
 
 		err = os.WriteFile(fileToRead, []byte(string(res)), os.ModeAppend)
 		if err != nil {
-			fmt.Printf("error writing file: %s", err)
+			fmt.Printf("error writing file: %s\n", err)
 		}
 		fmt.Printf("Operation completed. Result stored in %s\n", fileToRead)
 	}
