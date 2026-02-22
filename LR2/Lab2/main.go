@@ -143,6 +143,7 @@ func main() {
 			fmt.Println("1. Caesar")
 			fmt.Println("2. Vigenere")
 			fmt.Scan(&choice)
+			fmt.Println()
 
 			switch choice {
 			case 1:
@@ -165,10 +166,10 @@ func main() {
 			break
 		}
 
-		err = os.WriteFile(fileToRead, []byte(string(res)), os.ModeAppend)
+		err = os.WriteFile(fileToRead, []byte(string(res)), 0644)
 		if err != nil {
 			fmt.Printf("error writing file: %s\n", err)
 		}
-		fmt.Printf("Operation completed. Result stored in %s\n", fileToRead)
+		fmt.Printf("Operation completed. Result stored in %s\n\n", fileToRead)
 	}
 }
