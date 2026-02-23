@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 )
 
 const (
@@ -77,8 +78,6 @@ func Vigenere(str []rune, key []rune, decrypt bool) []rune {
 			}
 		}
 
-		shift++
-
 		if decrypt {
 			shift = -shift
 		}
@@ -94,82 +93,62 @@ func Vigenere(str []rune, key []rune, decrypt bool) []rune {
 }
 
 func main() {
-	var fileToRead string
+	if len(os.Args) < 6 {
+		fmt.Println("Usage: <inFile> <outFile> <enc/dec> <cae/vig> <key>")
+		return
+	}
+	decrypt := false
+
+	fileToRead := os.Args[1]
+	fileToWrite := os.Args[2]
+	mode := os.Args[3]
+	cipherType := os.Args[4]
+	keyRaw := os.Args[5]
+
 	var res []rune
 
-	var choice byte
-	for {
-		decrypt := false
-		for {
-			fmt.Println("Choose encrypt or decrypt:")
-			fmt.Println("1. Encrypt")
-			fmt.Println("2. Decrypt")
-			fmt.Println("3. Exit")
-
-			fmt.Scan(&choice)
-			switch choice {
-			case 1:
-				fmt.Println("Enter name of file which contains text to encrypt:")
-			case 2:
-				fmt.Println("Enter name of file which contains text to decrypt:")
-				decrypt = true
-			case 3:
-				return
-			default:
-				fmt.Println("Incorrect choice")
-				continue
-			}
-			break
-		}
-		fmt.Scan(&fileToRead)
-
-		file, err := os.Open(fileToRead)
-		if err != nil {
-			fmt.Printf("error opening file: %s\n", err)
-			continue
-		}
-
-		content, err := io.ReadAll(file)
-		if err != nil {
-			fmt.Printf("error reading file: %s\n", err)
-			file.Close()
-			continue
-		}
-		file.Close()
-		input := []rune(string(content))
-
-		for {
-			fmt.Println("\nChoose cipher type: ")
-			fmt.Println("1. Caesar")
-			fmt.Println("2. Vigenere")
-			fmt.Scan(&choice)
-			fmt.Println()
-
-			switch choice {
-			case 1:
-				fmt.Println("Enter key (positive number):")
-				var key int
-				fmt.Scan(&key)
-				if decrypt {
-					key = -key
-				}
-				res = Caesar(input, key)
-			case 2:
-				fmt.Println("Enter key word:")
-				var key string
-				fmt.Scan(&key)
-				res = Vigenere(input, []rune(key), decrypt)
-			default:
-				fmt.Println("Incorrect choice")
-				continue
-			}
-			break
-		}
-
-		err = os.WriteFile(fileToRead, []byte(string(res)), 0644)
-		if err != nil {
-			fmt.Printf("error writing file: %s\n", err)
-		}
-		fmt.Printf("Operation completed. Result stored in %s\n\n", fileToRead)
+	file, err := os.Open(fileToRead)
+	if err != nil {
+		fmt.Printf("error opening file: %s\n", err)
+		return
 	}
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Printf("error reading file: %s\n", err)
+		file.Close()
+		return
+	}
+	file.Close()
+
+	input := []rune(string(content))
+
+	if mode == "dec" {
+		decrypt = true
+	}
+
+	switch cipherType {
+	case "cae":
+		keyInt, err := strconv.Atoi(keyRaw)
+		if err != nil {
+			fmt.Printf("key should be positive number for Caesar")
+			return
+		}
+		if decrypt {
+			keyInt = -keyInt
+		}
+		res = Caesar(input, keyInt)
+	case "vig":
+		if _, err := strconv.Atoi(keyRaw); err == nil {
+			fmt.Println("cannot use number for key in Vigenere")
+			return
+		}
+		res = Vigenere(input, []rune(keyRaw), decrypt)
+	}
+
+	err = os.WriteFile(fileToWrite, []byte(string(res)), 0644)
+	if err != nil {
+		fmt.Printf("error writing file: %s\n", err)
+	}
+	fmt.Printf("Operation completed. Result stored in %s\n\n", fileToWrite)
 }
