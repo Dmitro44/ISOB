@@ -1,6 +1,10 @@
 package main
 
 import (
+	"strconv"
+
+	"go-cipher/crypto"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -11,11 +15,11 @@ import (
 var (
 	focusedBorderStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#33bf24"))
+				BorderForeground(lipgloss.Color("240"))
 
 	blurredBorderStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("240"))
+				BorderForeground(lipgloss.Color("237"))
 
 	cursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
 
@@ -31,12 +35,14 @@ var (
 			Foreground(lipgloss.Color("0")).
 			Padding(0, 2).
 			Bold(true)
+
+	borderColor = lipgloss.Color("99")
 )
 
 func panelStyle(width, height int) lipgloss.Style {
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("99")).
+		BorderForeground(borderColor).
 		Padding(1).
 		Width(width).
 		Height(height)
@@ -63,7 +69,6 @@ const (
 	FocusKey
 	FocusShift
 	FocusInput
-	FocusOutput
 	FocusBtn
 	FocusCount
 )
@@ -82,7 +87,7 @@ type model struct {
 }
 
 type keymap = struct {
-	next, prev, quit key.Binding
+	next, prev, quit, copy, clearInput key.Binding
 }
 
 func newTextarea(placeholder string) textarea.Model {
@@ -135,6 +140,12 @@ func NewModel() model {
 			prev: key.NewBinding(
 				key.WithKeys("shift+tab"),
 			),
+			copy: key.NewBinding(
+				key.WithKeys("ctrl+d"),
+			),
+			clearInput: key.NewBinding(
+				key.WithKeys("alt+d"),
+			),
 		},
 	}
 
@@ -157,7 +168,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		totalH := msg.Height - 2
 		topContentH := (totalH - 8) / 2
 		botContentH := (totalH-8)/2 + (totalH-8)%2
-		rightContentW := msg.Width - leftWidth - 8 // -4 left panel (border+pad), -4 right panel (border+pad)
+		rightContentW := msg.Width/2 - leftWidth - 8
 
 		// textarea overhead inside panel: 1 (label) + 2 (textarea border) = 3
 		m.Input.SetWidth(rightContentW - 2) // -2 for textarea border left+right
@@ -172,19 +183,60 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Key.Blur()
 			m.Shift.Blur()
 			return m, tea.Quit
+		case key.Matches(msg, m.keymap.copy):
+			m.Input.SetValue(m.Output.Value())
+			m.Focus = FocusInput
+			m.updateFocus()
+			return m, nil
+		case key.Matches(msg, m.keymap.clearInput):
+			m.Input.SetValue("")
+			m.Focus = FocusInput
+			m.updateFocus()
+			return m, nil
 		case key.Matches(msg, m.keymap.next):
 			m.Focus = (m.Focus + 1) % FocusCount
+			m.skipInactive(1)
 			m.updateFocus()
 			return m, nil
 		case key.Matches(msg, m.keymap.prev):
 			m.Focus = (m.Focus - 1 + FocusCount) % FocusCount
+			m.skipInactive(-1)
 			m.updateFocus()
 			return m, nil
 		case m.Focus == FocusMethod && msg.String() == "enter":
 			m.Method = (m.Method + 1) % 2
+			// if currently focused field became inactive, skip it
+			m.skipInactive(1)
+			m.updateFocus()
 			return m, nil
 		case m.Focus == FocusMode && msg.String() == "enter":
 			m.Mode = (m.Mode + 1) % 2
+			return m, nil
+		case m.Focus == FocusBtn && msg.String() == "enter":
+			m.Output.SetValue("")
+			var res []rune
+			decrypt := (m.Mode == Decrypt)
+
+			switch m.Method {
+			case Caesar:
+				key, err := strconv.Atoi(m.Shift.Value())
+				if err != nil {
+					m.Output.SetValue("Shift should be positive number")
+					return m, nil
+				}
+				if decrypt {
+					key = -key
+				}
+				res = crypto.Caesar([]rune(m.Input.Value()), key)
+			case Vigenere:
+				if _, err := strconv.Atoi(m.Key.Value()); err == nil {
+					m.Output.SetValue("Key cannot be a number")
+					return m, nil
+				}
+				res = crypto.Vigenere([]rune(m.Input.Value()), []rune(m.Key.Value()), decrypt)
+			}
+
+			m.Output.SetValue(string(res))
 			return m, nil
 		}
 	}
@@ -193,11 +245,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.Focus == FocusInput {
 		m.Input, cmd = m.Input.Update(msg)
-		cmds = append(cmds, cmd)
-	}
-
-	if m.Focus == FocusOutput {
-		m.Output, cmd = m.Output.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -214,6 +261,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m *model) skipInactive(dir int) {
+	if m.Method == Caesar && m.Focus == FocusKey {
+		m.Focus = (m.Focus + dir + FocusCount) % FocusCount
+	}
+	if m.Method == Vigenere && m.Focus == FocusShift {
+		m.Focus = (m.Focus + dir + FocusCount) % FocusCount
+	}
+}
+
 func (m *model) updateFocus() {
 	m.Input.Blur()
 	m.Key.Blur()
@@ -226,6 +282,15 @@ func (m *model) updateFocus() {
 		m.Key.Focus()
 	case FocusShift:
 		m.Shift.Focus()
+	}
+
+	switch m.Method {
+	case Caesar:
+		m.Key.SetValue("")
+		m.Key.Blur()
+	case Vigenere:
+		m.Shift.SetValue("")
+		m.Shift.Blur()
 	}
 }
 
@@ -275,7 +340,7 @@ func (m model) View() string {
 	)
 
 	leftWidth := 25
-	rightWidth := m.Width - leftWidth - 8 // leftWidth + 4 (left borders+padding) + 4 (right borders+padding)
+	rightWidth := m.Width/2 - leftWidth - 8
 
 	totalH := m.Height - 2
 	rem := (totalH - 8) % 2
@@ -289,14 +354,14 @@ func (m model) View() string {
 		Height(topH).
 		Width(rightWidth).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("99")).
+		BorderForeground(borderColor).
 		Padding(1)
 
 	outputPanelStyle := lipgloss.NewStyle().
 		Height(botH).
 		Width(rightWidth).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("99")).
+		BorderForeground(borderColor).
 		Padding(1)
 
 	inputPanel := inputPanelStyle.Render(labelStyle.Render("INPUT") + "\n" + m.Input.View())
