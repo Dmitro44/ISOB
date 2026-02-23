@@ -33,9 +33,7 @@ func Vigenere(str []rune, key []rune, decrypt bool) []rune {
 		newR := shiftRune(r, shift)
 		res[i] = newR
 
-		if newR != r {
-			keyID++
-		}
+		keyID++
 	}
 	return res
 }
