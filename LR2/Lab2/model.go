@@ -293,6 +293,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.copy):
 			m.Input.SetValue(m.Output.Value())
 			m.Output.SetValue("")
+			m.InputMode = ManualInput
 			m.Focus = FocusInput
 			m.updateFocus()
 			return m, nil
