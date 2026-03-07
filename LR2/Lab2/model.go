@@ -216,7 +216,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Output.SetWidth(rightContentW - 2)
 		m.Output.SetHeight(botContentH - 3)
 		// Set filepicker dimensions
-		m.Filepicker.SetHeight(topContentH - 3)
+		m.Filepicker.SetHeight(topContentH - 2)
 		m.SaveFilename.Width = 34
 	case tea.KeyMsg:
 		// ── Popup intercepts ALL keys when visible ──────────────────────────
@@ -406,9 +406,6 @@ func (m *model) skipInactive(dir int) {
 		if m.Method == Vigenere && m.Focus == FocusShift {
 			inactive = true
 		}
-		if m.InputMode == ManualInput && m.Focus == FocusSaveBtn {
-			inactive = true
-		}
 
 		if !inactive {
 			break
@@ -482,14 +479,11 @@ func (m model) View() string {
 		runBtnLabel = buttonStyle.Render(runBtnLabel)
 	}
 
-	saveBtnLabel := ""
-	if m.InputMode == File {
-		label := "SAVE TO FILE"
-		if m.Focus == FocusSaveBtn {
-			label = saveBtnStyle.Render(label)
-		}
-		saveBtnLabel = label
+	label := "SAVE TO FILE"
+	if m.Focus == FocusSaveBtn {
+		label = saveBtnStyle.Render(label)
 	}
+	saveBtnLabel := label
 
 	leftPanel := lipgloss.JoinVertical(
 		lipgloss.Left,
