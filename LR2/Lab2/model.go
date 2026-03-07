@@ -516,7 +516,7 @@ func (m model) View() string {
 	botH := topH + rem
 	leftH := totalH - 4 // всегда равно topOuterH + botOuterH = totalH
 
-	leftPanel = panelStyle(leftWidth, leftH).Render(leftPanel)
+	leftPanel = panelStyle(leftWidth, leftH).Render(lipgloss.PlaceVertical(leftH, lipgloss.Top, leftPanel))
 
 	inputPanelStyle := lipgloss.NewStyle().
 		Height(topH).
@@ -556,9 +556,9 @@ func (m model) View() string {
 		}
 	}
 
-	inputPanel := inputPanelStyle.Render(labelStyle.Render(inputTitle) + "\n" + inputContent)
+	inputPanel := inputPanelStyle.Render(lipgloss.PlaceVertical(topH, lipgloss.Top, labelStyle.Render(inputTitle)+"\n"+inputContent))
 
-	outputPanel := outputPanelStyle.Render(labelStyle.Render("OUTPUT") + "\n" + m.Output.View())
+	outputPanel := outputPanelStyle.Render(lipgloss.PlaceVertical(botH, lipgloss.Top, labelStyle.Render("OUTPUT")+"\n"+m.Output.View()))
 
 	rightPanel := lipgloss.JoinVertical(0, inputPanel, outputPanel)
 
