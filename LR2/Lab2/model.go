@@ -1,10 +1,11 @@
 package main
 
 import (
+	"go-cipher/crypto"
+	"os"
 	"strconv"
 
-	"go-cipher/crypto"
-
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -37,6 +38,18 @@ var (
 			Bold(true)
 
 	borderColor = lipgloss.Color("99")
+
+	saveBtnStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("86")).
+			Foreground(lipgloss.Color("0")).
+			Padding(0, 2).
+			Bold(true)
+
+	popupStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("86")).
+			Padding(1, 2).
+			Width(40)
 )
 
 func panelStyle(width, height int) lipgloss.Style {
@@ -49,8 +62,14 @@ func panelStyle(width, height int) lipgloss.Style {
 }
 
 type (
-	Method int
-	Mode   int
+	Method    int
+	Mode      int
+	InputMode int
+)
+
+const (
+	ManualInput InputMode = iota
+	File
 )
 
 const (
@@ -64,26 +83,35 @@ const (
 )
 
 const (
-	FocusMethod int = iota
+	FocusInputMode int = iota
+	FocusFilepicker
+	FocusMethod
 	FocusMode
 	FocusKey
 	FocusShift
 	FocusInput
 	FocusBtn
+	FocusSaveBtn
 	FocusCount
 )
 
 type model struct {
-	Method Method
-	Mode   Mode
-	Focus  int
-	Width  int
-	Height int
-	Key    textinput.Model
-	Shift  textinput.Model
-	Input  textarea.Model
-	Output textarea.Model
-	keymap keymap
+	Filepicker    filepicker.Model
+	SelectedFile  string
+	FileConfirmed bool
+	InputMode     InputMode
+	Method        Method
+	Mode          Mode
+	Focus         int
+	Width         int
+	Height        int
+	Key           textinput.Model
+	Shift         textinput.Model
+	Input         textarea.Model
+	Output        textarea.Model
+	SaveFilename  textinput.Model
+	ShowSavePopup bool
+	keymap        keymap
 }
 
 type keymap = struct {
@@ -121,15 +149,27 @@ func newTextinput(placeholder string) textinput.Model {
 	return ti
 }
 
+func newFilepicker() filepicker.Model {
+	fp := filepicker.New()
+	fp.AllowedTypes = []string{".txt", ".md", ".go"}
+	dir, _ := os.Getwd()
+	fp.CurrentDirectory = dir
+	fp.FileAllowed = true
+	fp.DirAllowed = false
+	return fp
+}
+
 func NewModel() model {
 	m := model{
-		Method: Caesar,
-		Mode:   Encrypt,
-		Focus:  FocusInput,
-		Input:  newTextarea("Type text you want to cipher..."),
-		Output: newOutputTextarea("Result will appear here..."),
-		Key:    newTextinput("Enter key..."),
-		Shift:  newTextinput("3"),
+		Filepicker:   newFilepicker(),
+		Method:       Caesar,
+		Mode:         Encrypt,
+		Focus:        FocusInput,
+		Input:        newTextarea("Type text you want to cipher..."),
+		Output:       newOutputTextarea("Result will appear here..."),
+		SaveFilename: newTextinput("output.txt"),
+		Key:          newTextinput("Enter key..."),
+		Shift:        newTextinput("3"),
 		keymap: keymap{
 			quit: key.NewBinding(
 				key.WithKeys("esc", "ctrl+c"),
@@ -153,7 +193,7 @@ func NewModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return m.Filepicker.Init()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -168,14 +208,47 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		totalH := msg.Height - 2
 		topContentH := (totalH - 8) / 2
 		botContentH := (totalH-8)/2 + (totalH-8)%2
-		rightContentW := msg.Width/2 - leftWidth - 8
+		rightContentW := msg.Width - leftWidth - 8
 
 		// textarea overhead inside panel: 1 (label) + 2 (textarea border) = 3
 		m.Input.SetWidth(rightContentW - 2) // -2 for textarea border left+right
 		m.Input.SetHeight(topContentH - 3)
 		m.Output.SetWidth(rightContentW - 2)
 		m.Output.SetHeight(botContentH - 3)
+		// Set filepicker dimensions
+		m.Filepicker.SetHeight(topContentH - 3)
+		m.SaveFilename.Width = 34
 	case tea.KeyMsg:
+		// ── Popup intercepts ALL keys when visible ──────────────────────────
+		if m.ShowSavePopup {
+			switch msg.String() {
+			case "esc":
+				m.ShowSavePopup = false
+				m.SaveFilename.Blur()
+				return m, nil
+			case "enter":
+				filename := m.SaveFilename.Value()
+				if filename == "" {
+					filename = "output.txt"
+				}
+				err := os.WriteFile(filename, []byte(m.Output.Value()), 0644)
+				if err != nil {
+					m.Output.SetValue("Error saving file: " + err.Error())
+				} else {
+					m.Output.SetValue("Saved to: " + filename)
+				}
+				m.ShowSavePopup = false
+				m.SaveFilename.Blur()
+				return m, nil
+			default:
+				var cmd tea.Cmd
+				m.SaveFilename, cmd = m.SaveFilename.Update(msg)
+				return m, cmd
+			}
+		}
+		// ── End popup handler ───────────────────────────────────────────────
+
+		// Handle global keys first (Quit, Tab)
 		switch {
 		case key.Matches(msg, m.keymap.quit):
 			m.Input.Blur()
@@ -183,8 +256,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Key.Blur()
 			m.Shift.Blur()
 			return m, tea.Quit
+		case key.Matches(msg, m.keymap.next):
+			m.Focus = (m.Focus + 1) % FocusCount
+			m.skipInactive(1)
+			m.updateFocus()
+			return m, m.Filepicker.Init()
+		case key.Matches(msg, m.keymap.prev):
+			m.Focus = (m.Focus - 1 + FocusCount) % FocusCount
+			m.skipInactive(-1)
+			m.updateFocus()
+			return m, m.Filepicker.Init()
+		}
+
+		// Handle Filepicker specific keys
+		if m.InputMode == File && m.Focus == FocusFilepicker && !m.FileConfirmed {
+			var cmd tea.Cmd
+			m.Filepicker, cmd = m.Filepicker.Update(msg)
+			if didSelect, path := m.Filepicker.DidSelectFile(msg); didSelect {
+				m.SelectedFile = path
+				m.FileConfirmed = true
+			}
+			return m, cmd
+		}
+
+		if m.InputMode == File && m.Focus == FocusFilepicker && m.FileConfirmed {
+			if msg.String() == "backspace" {
+				m.FileConfirmed = false
+				m.SelectedFile = ""
+				return m, m.Filepicker.Init()
+			}
+			return m, nil
+		}
+
+		// Handle other focused elements
+		switch {
 		case key.Matches(msg, m.keymap.copy):
 			m.Input.SetValue(m.Output.Value())
+			m.Output.SetValue("")
 			m.Focus = FocusInput
 			m.updateFocus()
 			return m, nil
@@ -193,16 +301,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Focus = FocusInput
 			m.updateFocus()
 			return m, nil
-		case key.Matches(msg, m.keymap.next):
-			m.Focus = (m.Focus + 1) % FocusCount
-			m.skipInactive(1)
+		case m.Focus == FocusInputMode && msg.String() == "enter":
+			m.InputMode = (m.InputMode + 1) % 2
+			m.FileConfirmed = false
+			m.SelectedFile = ""
 			m.updateFocus()
-			return m, nil
-		case key.Matches(msg, m.keymap.prev):
-			m.Focus = (m.Focus - 1 + FocusCount) % FocusCount
-			m.skipInactive(-1)
-			m.updateFocus()
-			return m, nil
+			return m, m.Filepicker.Init()
 		case m.Focus == FocusMethod && msg.String() == "enter":
 			m.Method = (m.Method + 1) % 2
 			// if currently focused field became inactive, skip it
@@ -217,6 +321,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var res []rune
 			decrypt := (m.Mode == Decrypt)
 
+			var inputSource []rune
+			if m.InputMode == File {
+				if m.SelectedFile == "" {
+					m.Output.SetValue("No file selected")
+					return m, nil
+				}
+				content, err := os.ReadFile(m.SelectedFile)
+				if err != nil {
+					m.Output.SetValue("Error reading file: " + err.Error())
+					return m, nil
+				}
+				inputSource = []rune(string(content))
+			} else {
+				inputSource = []rune(m.Input.Value())
+			}
+
 			switch m.Method {
 			case Caesar:
 				key, err := strconv.Atoi(m.Shift.Value())
@@ -227,16 +347,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if decrypt {
 					key = -key
 				}
-				res = crypto.Caesar([]rune(m.Input.Value()), key)
+				res = crypto.Caesar(inputSource, key)
 			case Vigenere:
 				if _, err := strconv.Atoi(m.Key.Value()); err == nil {
 					m.Output.SetValue("Key cannot be a number")
 					return m, nil
 				}
-				res = crypto.Vigenere([]rune(m.Input.Value()), []rune(m.Key.Value()), decrypt)
+				res = crypto.Vigenere(inputSource, []rune(m.Key.Value()), decrypt)
 			}
 
 			m.Output.SetValue(string(res))
+			return m, nil
+		case m.Focus == FocusSaveBtn && msg.String() == "enter":
+			m.ShowSavePopup = true
+			m.SaveFilename.SetValue("")
+			m.SaveFilename.Focus()
 			return m, nil
 		}
 	}
@@ -245,6 +370,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.Focus == FocusInput {
 		m.Input, cmd = m.Input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	if m.Focus == FocusFilepicker {
+		m.Filepicker, cmd = m.Filepicker.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -262,10 +392,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) skipInactive(dir int) {
-	if m.Method == Caesar && m.Focus == FocusKey {
-		m.Focus = (m.Focus + dir + FocusCount) % FocusCount
-	}
-	if m.Method == Vigenere && m.Focus == FocusShift {
+	for {
+		inactive := false
+		if m.InputMode == ManualInput && m.Focus == FocusFilepicker {
+			inactive = true
+		}
+		if m.InputMode == File && m.Focus == FocusInput {
+			inactive = true
+		}
+		if m.Method == Caesar && m.Focus == FocusKey {
+			inactive = true
+		}
+		if m.Method == Vigenere && m.Focus == FocusShift {
+			inactive = true
+		}
+		if m.InputMode == ManualInput && m.Focus == FocusSaveBtn {
+			inactive = true
+		}
+
+		if !inactive {
+			break
+		}
 		m.Focus = (m.Focus + dir + FocusCount) % FocusCount
 	}
 }
@@ -274,6 +421,7 @@ func (m *model) updateFocus() {
 	m.Input.Blur()
 	m.Key.Blur()
 	m.Shift.Blur()
+	m.SaveFilename.Blur()
 
 	switch m.Focus {
 	case FocusInput:
@@ -282,6 +430,10 @@ func (m *model) updateFocus() {
 		m.Key.Focus()
 	case FocusShift:
 		m.Shift.Focus()
+	}
+
+	if m.InputMode == File {
+		m.Input.Blur()
 	}
 
 	switch m.Method {
@@ -295,6 +447,15 @@ func (m *model) updateFocus() {
 }
 
 func (m model) View() string {
+	inputModeLabel := labelStyle.Render("INPUT MODE")
+	inputModeValue := "File"
+	if m.InputMode == ManualInput {
+		inputModeValue = "Manual input"
+	}
+	if m.Focus == FocusInputMode {
+		inputModeValue = selectedStyle.Render(inputModeValue) + " (Enter)"
+	}
+
 	methodLabel := labelStyle.Render("METHOD")
 	methodValue := "Caesar"
 	if m.Method == Vigenere {
@@ -321,8 +482,20 @@ func (m model) View() string {
 		runBtnLabel = buttonStyle.Render(runBtnLabel)
 	}
 
+	saveBtnLabel := ""
+	if m.InputMode == File {
+		label := "SAVE TO FILE"
+		if m.Focus == FocusSaveBtn {
+			label = saveBtnStyle.Render(label)
+		}
+		saveBtnLabel = label
+	}
+
 	leftPanel := lipgloss.JoinVertical(
 		lipgloss.Left,
+		inputModeLabel,
+		inputModeValue,
+		"",
 		methodLabel,
 		methodValue,
 		"",
@@ -337,10 +510,11 @@ func (m model) View() string {
 		"",
 		"",
 		runBtnLabel,
+		saveBtnLabel,
 	)
 
 	leftWidth := 25
-	rightWidth := m.Width/2 - leftWidth - 8
+	rightWidth := m.Width - leftWidth - 8
 
 	totalH := m.Height - 2
 	rem := (totalH - 8) % 2
@@ -364,11 +538,60 @@ func (m model) View() string {
 		BorderForeground(borderColor).
 		Padding(1)
 
-	inputPanel := inputPanelStyle.Render(labelStyle.Render("INPUT") + "\n" + m.Input.View())
+	inputTitle := "INPUT"
+	inputContent := m.Input.View()
+
+	if m.InputMode == File {
+		if m.FileConfirmed {
+			inputTitle = "FILE SELECTED"
+
+			style := selectedStyle
+			if m.Focus != FocusFilepicker {
+				style = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+			}
+
+			selectedLine := style.Render("Selected: " + m.SelectedFile)
+			hintLine := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Italic(true).
+				Render("Press Backspace to change file")
+			inputContent = lipgloss.JoinVertical(lipgloss.Left, selectedLine, "", hintLine)
+		} else {
+			inputTitle = "FILE PICKER"
+			inputContent = m.Filepicker.View()
+		}
+	}
+
+	inputPanel := inputPanelStyle.Render(labelStyle.Render(inputTitle) + "\n" + inputContent)
 
 	outputPanel := outputPanelStyle.Render(labelStyle.Render("OUTPUT") + "\n" + m.Output.View())
 
 	rightPanel := lipgloss.JoinVertical(0, inputPanel, outputPanel)
 
-	return lipgloss.JoinHorizontal(0, leftPanel, rightPanel)
+	baseView := lipgloss.JoinHorizontal(0, leftPanel, rightPanel)
+
+	if m.ShowSavePopup {
+		popupContent := lipgloss.JoinVertical(
+			lipgloss.Left,
+			labelStyle.Render("SAVE OUTPUT TO FILE"),
+			"",
+			"Filename:",
+			m.SaveFilename.View(),
+			"",
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Italic(true).
+				Render("Enter to save  •  Esc to cancel"),
+		)
+		popup := popupStyle.Render(popupContent)
+		return lipgloss.Place(
+			m.Width, m.Height,
+			lipgloss.Center, lipgloss.Center,
+			popup,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+		)
+	}
+
+	return baseView
 }
