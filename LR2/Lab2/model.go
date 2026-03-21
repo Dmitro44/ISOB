@@ -1,9 +1,11 @@
 package main
 
 import (
-	"go-cipher/crypto"
 	"os"
 	"strconv"
+	"time"
+
+	"go-cipher/crypto"
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/key"
@@ -102,6 +104,7 @@ type model struct {
 	InputMode     InputMode
 	Method        Method
 	Mode          Mode
+	Status        string
 	Focus         int
 	Width         int
 	Height        int
@@ -113,6 +116,8 @@ type model struct {
 	ShowSavePopup bool
 	keymap        keymap
 }
+
+type statusMsg string
 
 type keymap = struct {
 	next, prev, quit, copy, clearInput key.Binding
@@ -218,6 +223,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Set filepicker dimensions
 		m.Filepicker.SetHeight(topContentH - 2)
 		m.SaveFilename.Width = 34
+	case statusMsg:
+		m.Status = ""
+		return m, nil
 	case tea.KeyMsg:
 		// ── Popup intercepts ALL keys when visible ──────────────────────────
 		if m.ShowSavePopup {
@@ -231,15 +239,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if filename == "" {
 					filename = "output.txt"
 				}
-				err := os.WriteFile(filename, []byte(m.Output.Value()), 0644)
+
+				err := os.WriteFile(filename, []byte(m.Output.Value()), 0o644)
 				if err != nil {
-					m.Output.SetValue("Error saving file: " + err.Error())
+					m.Status = "Error: " + err.Error()
 				} else {
-					m.Output.SetValue("Saved to: " + filename)
+					m.Status = "Saved to: " + filename
 				}
+
 				m.ShowSavePopup = false
 				m.SaveFilename.Blur()
-				return m, nil
+
+				return m, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+					return statusMsg("")
+				})
 			default:
 				var cmd tea.Cmd
 				m.SaveFilename, cmd = m.SaveFilename.Update(msg)
@@ -559,7 +572,15 @@ func (m model) View() string {
 
 	inputPanel := inputPanelStyle.Render(lipgloss.PlaceVertical(topH, lipgloss.Top, labelStyle.Render(inputTitle)+"\n"+inputContent))
 
-	outputPanel := outputPanelStyle.Render(lipgloss.PlaceVertical(botH, lipgloss.Top, labelStyle.Render("OUTPUT")+"\n"+m.Output.View()))
+	outputView := m.Output.View()
+	if m.Status != "" {
+		outputView = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("86")).
+			Bold(true).
+			Render(m.Status)
+	}
+
+	outputPanel := outputPanelStyle.Render(lipgloss.PlaceVertical(botH, lipgloss.Top, labelStyle.Render("OUTPUT")+"\n"+outputView))
 
 	rightPanel := lipgloss.JoinVertical(0, inputPanel, outputPanel)
 
