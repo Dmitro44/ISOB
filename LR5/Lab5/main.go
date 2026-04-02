@@ -54,9 +54,14 @@ func unsafeWrite(buf *[8]byte, data []byte) {
 }
 
 func safeWrite(buf *[8]byte, data []byte) error {
-	if len(data) > len(buf) {
-		return fmt.Errorf("overflow: data (%d bytes) > buffer (%d bytes)", len(data), len(buf))
+	var err error
+	n := len(data)
+	if n > len(buf) {
+		n = len(buf)
+		err = fmt.Errorf("truncated: wrote %d of %d bytes", n, len(data))
 	}
-	copy(buf[:], data)
-	return nil
+	for i := 0; i < n; i++ {
+		buf[i] = data[i]
+	}
+	return err
 }
