@@ -1,0 +1,122 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
+)
+
+type service struct {
+	db *pgx.Conn
+}
+
+func main() {
+	godotenv.Overload()
+
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer conn.Close(context.Background())
+
+	serv := service{
+		db: conn,
+	}
+
+	serv.runMenu()
+}
+
+func (s *service) runMenu() {
+	r := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Println("\n========== SQL Injection Demo ==========")
+		fmt.Println("1. Vulnerable login (fmt.Sprintf)")
+		fmt.Println("2. Secure login (parameterized queries)")
+		fmt.Println("3. Exit")
+		fmt.Print("\nChoose option: ")
+
+		choice, _ := r.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		switch choice {
+		case "1":
+			s.vulnerableLogin(r)
+		case "2":
+			s.secureLogin(r)
+		case "3":
+			fmt.Println("Goodbye!")
+			os.Exit(0)
+		default:
+			fmt.Println("Invalid option, try again")
+		}
+	}
+}
+
+func (s *service) vulnerableLogin(r *bufio.Reader) {
+	fmt.Println("\n--- Vulnerable Login (NO PROTECTION) ---")
+	fmt.Print("Enter username: ")
+	username, _ := r.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	fmt.Print("Enter password: ")
+	password, _ := r.ReadString('\n')
+	password = strings.TrimSpace(password)
+
+	fmt.Println("\n[VULNERABLE] Executing query with string concatenation...")
+
+	query := fmt.Sprintf("SELECT id, username, password, role FROM users WHERE username='%s' AND password='%s'", username, password)
+	fmt.Printf("[DEBUG] Query: %s\n", query)
+
+	var id int
+	var dbUsername, dbPassword, role string
+
+	err := s.db.QueryRow(context.Background(), query).Scan(&id, &dbUsername, &dbPassword, &role)
+	if err != nil {
+		fmt.Printf("[FAIL] Authentication failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("[SUCCESS] User authenticated!\n")
+	fmt.Printf("  ID: %d\n", id)
+	fmt.Printf("  Username: %s\n", dbUsername)
+	fmt.Printf("  Password: %s (has been stolen)\n", dbPassword)
+	fmt.Printf("  Role: %s\n", role)
+}
+
+func (s *service) secureLogin(r *bufio.Reader) {
+	fmt.Println("\n--- Secure Login (PROTECTED) ---")
+	fmt.Print("Enter username: ")
+	username, _ := r.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	fmt.Print("Enter password: ")
+	password, _ := r.ReadString('\n')
+	password = strings.TrimSpace(password)
+
+	fmt.Println("\n[SECURE] Executing parameterized query...")
+
+	query := "SELECT id, username, password, role FROM users WHERE username=$1 AND password=$2"
+	fmt.Printf("[DEBUG] Query: %s\n", query)
+	fmt.Printf("[DEBUG] Parameters: username=%q, password=%q\n", username, password)
+
+	var id int
+	var dbUsername, dbPassword, role string
+
+	err := s.db.QueryRow(context.Background(), query, username, password).Scan(&id, &dbUsername, &dbPassword, &role)
+	if err != nil {
+		fmt.Printf("[FAIL] Authentication failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("[SUCCESS] User authenticated!\n")
+	fmt.Printf("  ID: %d\n", id)
+	fmt.Printf("  Username: %s\n", dbUsername)
+	fmt.Printf("  Role: %s\n", role)
+}
