@@ -3,13 +3,14 @@ package main
 const (
 	// Panel dimensions
 	LeftPanelWidth = 25
-	PanelGap       = 4
 	PanelMargin    = 2
 
-	// Border & padding constants
-	BorderWidth   = 2 // Rounded border takes 2 chars (1 each side)
-	PaddingWidth  = 2 // Padding of 1 on each side = 2 total
-	OverheadWidth = BorderWidth + PaddingWidth
+	// Layout offsets
+	RightPanelWidthOffset = 8
+	ContentHeightOffset   = 8
+	LeftPanelHeightOffset = 4
+	InternalWidthOffset   = 2
+	InternalHeightOffset  = 3
 )
 
 type Layout struct {
@@ -40,23 +41,25 @@ func NewLayout(width, height int) Layout {
 
 	// Calculate panel dimensions
 	totalH := height - PanelMargin
-	l.RightPanelWidth = width - LeftPanelWidth - 8 // Matches existing calculation: msg.Width - leftWidth - 8
+	l.RightPanelWidth = width - LeftPanelWidth - RightPanelWidthOffset // Matches existing calculation: msg.Width - leftWidth - 8
 
 	// Split vertical space for right panels
-	contentHeight := totalH - 8 // Matches existing calculation: totalH - 8
+	contentHeight := totalH - ContentHeightOffset
+	// Split space equally between top and bottom panels.
+	// Bottom panel takes the remainder if height is odd.
 	l.TopPanelHeight = contentHeight / 2
 	l.BottomPanelHeight = contentHeight/2 + contentHeight%2
 
-	l.LeftPanelHeight = totalH - 4 // Matches existing calculation: totalH - 4
+	l.LeftPanelHeight = totalH - LeftPanelHeightOffset // Matches existing calculation: totalH - 4
 
 	// Internal dimensions (subtract borders + padding + label line)
-	l.TextareaInputWidth = l.RightPanelWidth - 2
-	l.TextareaInputHeight = l.TopPanelHeight - 3
+	l.TextareaInputWidth = l.RightPanelWidth - InternalWidthOffset
+	l.TextareaInputHeight = l.TopPanelHeight - InternalHeightOffset
 
-	l.TextareaOutputWidth = l.RightPanelWidth - 2
-	l.TextareaOutputHeight = l.BottomPanelHeight - 3
+	l.TextareaOutputWidth = l.RightPanelWidth - InternalWidthOffset
+	l.TextareaOutputHeight = l.BottomPanelHeight - InternalHeightOffset
 
-	l.FilepickerHeight = l.TopPanelHeight - 3
+	l.FilepickerHeight = l.TopPanelHeight - InternalHeightOffset
 
 	return l
 }
