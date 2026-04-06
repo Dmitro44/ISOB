@@ -1,14 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"kerberos-go/kerberos"
 )
 
 func main() {
-	fmt.Println("=== KERBEROS AUTHENTICATION PROTOCOL SIMULATION ===\n")
-
-	clientName := "alice"
+	clientName := "dmitry"
 	clientPassword := "password123"
 	serviceName := "fileserver"
 

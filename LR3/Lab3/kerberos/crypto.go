@@ -1,4 +1,3 @@
-// Package kerberos
 package kerberos
 
 import (

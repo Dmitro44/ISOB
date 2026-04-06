@@ -25,6 +25,7 @@
 
   на тему
 
+  #set par(justify: false)
   #upper[#text(weight: "bold")["Идентификация и аутентификация пользователей. Протокол Kerberos."]]
   // #v(1em)
 
