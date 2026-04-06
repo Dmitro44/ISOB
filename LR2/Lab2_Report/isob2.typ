@@ -47,4 +47,8 @@
   #stp2024.listing[Код алгоритма Виженера][
     #raw(read("code/vigenere.go"))
   ]
+
+  #stp2024.listing[Код терминального интерфейса][
+    #raw(read("code/model.go"))
+  ]
 ]
