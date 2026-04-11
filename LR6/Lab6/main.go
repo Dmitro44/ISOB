@@ -37,9 +37,11 @@ func (s *service) runMenu() {
 
 	for {
 		fmt.Println("\n========== SQL Injection Demo ==========")
-		fmt.Println("1. Vulnerable login (fmt.Sprintf)")
+		fmt.Println("1. Vulnerable login (or '1'='1')")
 		fmt.Println("2. Secure login (parameterized queries)")
-		fmt.Println("3. Exit")
+		fmt.Println("3. Vulnerable user search (union injection)")
+		fmt.Println("4. Secure user search (parameterized queries)")
+		fmt.Println("5. Exit")
 		fmt.Print("\nChoose option: ")
 
 		choice, _ := r.ReadString('\n')
@@ -51,11 +53,72 @@ func (s *service) runMenu() {
 		case "2":
 			s.secureLogin(r)
 		case "3":
+			s.vulnerableSearchUser(r)
+		case "4":
+			s.secureUserSearch(r)
+		case "5":
 			fmt.Println("Goodbye!")
 			os.Exit(0)
 		default:
 			fmt.Println("Invalid option, try again")
 		}
+	}
+}
+
+func (s *service) vulnerableSearchUser(r *bufio.Reader) {
+	fmt.Println("\n--- Vulnerable Search (NO PROTECTION) ---")
+	fmt.Print("Enter search term: ")
+
+	searchTerm, _ := r.ReadString('\n')
+	searchTerm = strings.TrimSpace(searchTerm)
+
+	query := fmt.Sprintf("select username, role from users where username like '%%%s%%'", searchTerm)
+	fmt.Printf("[DEBUG] Query: %s\n", query)
+
+	rows, err := s.db.Query(context.Background(), query)
+	if err != nil {
+		fmt.Printf("[FAIL] Search failed: %v\n", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var username string
+		var role string
+		err := rows.Scan(&username, &role)
+		if err != nil {
+			fmt.Printf("[FAIL] Unable to scan row: %v\n", err)
+			return
+		}
+		fmt.Printf("%s, %s\n", username, role)
+	}
+}
+
+func (s *service) secureUserSearch(r *bufio.Reader) {
+	fmt.Println("\n--- Secure user search (PROTECTED) ---")
+	fmt.Print("Enter search term: ")
+	searchTerm, _ := r.ReadString('\n')
+	searchTerm = strings.TrimSpace(searchTerm)
+
+	query := "select username, role from users where username like '$1'"
+	fmt.Printf("[DEBUG] Query: %s\n", query)
+	fmt.Printf("[DEBUG] Parameters: search term=%q\n", searchTerm)
+
+	rows, err := s.db.Query(context.Background(), query, searchTerm)
+	if err != nil {
+		fmt.Printf("[FAIL] Authentication failed: %v\n", err)
+		return
+	}
+
+	for rows.Next() {
+		var username string
+		var role string
+		err := rows.Scan(&username, &role)
+		if err != nil {
+			fmt.Printf("[FAIL] Unable to scan row: %v\n", err)
+			return
+		}
+		fmt.Printf("%s, %s\n", username, role)
 	}
 }
 
@@ -68,8 +131,6 @@ func (s *service) vulnerableLogin(r *bufio.Reader) {
 	fmt.Print("Enter password: ")
 	password, _ := r.ReadString('\n')
 	password = strings.TrimSpace(password)
-
-	fmt.Println("\n[VULNERABLE] Executing query with string concatenation...")
 
 	query := fmt.Sprintf("SELECT id, username, password, role FROM users WHERE username='%s' AND password='%s'", username, password)
 	fmt.Printf("[DEBUG] Query: %s\n", query)
