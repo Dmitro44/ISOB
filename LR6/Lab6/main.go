@@ -41,7 +41,7 @@ func (s *service) runMenu() {
 		fmt.Println("2. Secure login (parameterized queries)")
 		fmt.Println("3. Vulnerable user search (union injection)")
 		fmt.Println("4. Secure user search (parameterized queries)")
-		fmt.Println("5. Vulnerable user delete ()")
+		fmt.Println("5. Vulnerable user delete (stacked queries)")
 		fmt.Println("6. Secure user delete (parameterized queries)")
 		fmt.Println("7. Exit")
 		fmt.Print("\nChoose option: ")
