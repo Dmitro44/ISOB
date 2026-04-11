@@ -41,7 +41,9 @@ func (s *service) runMenu() {
 		fmt.Println("2. Secure login (parameterized queries)")
 		fmt.Println("3. Vulnerable user search (union injection)")
 		fmt.Println("4. Secure user search (parameterized queries)")
-		fmt.Println("5. Exit")
+		fmt.Println("5. Vulnerable user delete ()")
+		fmt.Println("6. Secure user delete (parameterized queries)")
+		fmt.Println("7. Exit")
 		fmt.Print("\nChoose option: ")
 
 		choice, _ := r.ReadString('\n')
@@ -57,6 +59,10 @@ func (s *service) runMenu() {
 		case "4":
 			s.secureUserSearch(r)
 		case "5":
+			s.vulnarableDeleteUser(r)
+		case "6":
+			s.secureDeleteUser(r)
+		case "7":
 			fmt.Println("Goodbye!")
 			os.Exit(0)
 		default:
@@ -98,15 +104,15 @@ func (s *service) secureUserSearch(r *bufio.Reader) {
 	fmt.Println("\n--- Secure user search (PROTECTED) ---")
 	fmt.Print("Enter search term: ")
 	searchTerm, _ := r.ReadString('\n')
-	searchTerm = strings.TrimSpace(searchTerm)
+	searchTerm = "%" + strings.TrimSpace(searchTerm) + "%"
 
-	query := "select username, role from users where username like '$1'"
+	query := "select username, role from users where username like $1"
 	fmt.Printf("[DEBUG] Query: %s\n", query)
 	fmt.Printf("[DEBUG] Parameters: search term=%q\n", searchTerm)
 
 	rows, err := s.db.Query(context.Background(), query, searchTerm)
 	if err != nil {
-		fmt.Printf("[FAIL] Authentication failed: %v\n", err)
+		fmt.Printf("[FAIL] Search failed: %v\n", err)
 		return
 	}
 
@@ -180,4 +186,50 @@ func (s *service) secureLogin(r *bufio.Reader) {
 	fmt.Printf("  ID: %d\n", id)
 	fmt.Printf("  Username: %s\n", dbUsername)
 	fmt.Printf("  Role: %s\n", role)
+}
+
+func (s *service) vulnarableDeleteUser(r *bufio.Reader) {
+	fmt.Println("\n--- Vulnerable User Delete (NO PROTECTION) ---")
+	fmt.Print("Enter username: ")
+	username, _ := r.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	query := fmt.Sprintf("delete from users where username='%s'", username)
+	fmt.Printf("[DEBUG] Query: %s\n", query)
+
+	commandTag, err := s.db.Exec(context.Background(), query)
+	if err != nil {
+		fmt.Printf("[FAIL] Deletion failed: %v\n", err)
+		return
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		fmt.Println("[WARNING] No rows were affected")
+	} else {
+		fmt.Printf("User successfully deleted")
+	}
+}
+
+func (s *service) secureDeleteUser(r *bufio.Reader) {
+	fmt.Println("\n--- Secure User Delete (PROTECTED) ---")
+	fmt.Print("Enter username: ")
+	username, _ := r.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	query := "delete from users where username=$1"
+
+	fmt.Printf("[DEBUG] Query: %s\n", query)
+	fmt.Printf("[DEBUG] Parameters: username=%s\n", username)
+
+	commandTag, err := s.db.Exec(context.Background(), query, username)
+	if err != nil {
+		fmt.Printf("[FAIL] Deletion failed: %v\n", err)
+		return
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		fmt.Printf("[WARNING] No rows were affected: %v\n", err)
+	} else {
+		fmt.Printf("User successfully deleted")
+	}
 }
