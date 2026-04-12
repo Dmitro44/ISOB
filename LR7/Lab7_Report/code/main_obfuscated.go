@@ -1,0 +1,1 @@
+../../Lab7/lab_to_obfuscate/main_obfuscated.go
