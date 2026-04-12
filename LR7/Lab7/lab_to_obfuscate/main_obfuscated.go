@@ -5,70 +5,69 @@ import (
 	"unsafe"
 )
 
-func IllO11IOI1Ol(IO0II1l0IOI0 []byte) string {
-	for I1l1l001IO1I := range IO0II1l0IOI0 {
-		IO0II1l0IOI0[I1l1l001IO1I] ^= 0xAA
-	}
-	return string(IO0II1l0IOI0)
-}
-
-type l0I1OllII01O struct {
-	Il1O1l0I10lI	[8]byte
-	lIlO1O1OOIl1	[8]byte
+type O01lO0I1l10O struct {
+	O0OI1I110l1O	[8]byte
+	OllI000l1l0O	[8]byte
 }
 
 func main() {
-	IO0II1l0IOI0 := l0I1OllII01O{
-		Il1O1l0I10lI:	[8]byte{'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A'},
-		lIlO1O1OOIl1:	[8]byte{'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'},
+	OOl0I0lO0lOI := O01lO0I1l10O{
+		O0OI1I110l1O:	[8]byte{'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A'},
+		OllI000l1l0O:	[8]byte{'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'},
 	}
 
-	fmt.Println("Before write: ")
-	fmt.Printf("buf1: %q\n", string(IO0II1l0IOI0.Il1O1l0I10lI[:]))
-	fmt.Printf("buf2: %q\n", string(IO0II1l0IOI0.lIlO1O1OOIl1[:]))
+	fmt.Println(OIlOIl0100II([]byte{0xe8, 0xcf, 0xcc, 0xc5, 0xd8, 0xcf, 0x8a, 0xdd, 0xd8, 0xc3, 0xde, 0xcf, 0x90, 0x8a}))
+	fmt.Printf(OIlOIl0100II([]byte{0xc8, 0xdf, 0xcc, 0x9b, 0x90, 0x8a, 0x8f, 0xdb, 0xa0}), string(OOl0I0lO0lOI.O0OI1I110l1O[:]))
+	fmt.Printf(OIlOIl0100II([]byte{0xc8, 0xdf, 0xcc, 0x98, 0x90, 0x8a, 0x8f, 0xdb, 0xa0}), string(OOl0I0lO0lOI.OllI000l1l0O[:]))
 	fmt.Println()
 
-	var llIIOI1II0OO []byte
-	fmt.Println("Enter your message:")
-	fmt.Scan(&llIIOI1II0OO)
-	fmt.Printf("Input (%d bytes): %q\n\n", len(llIIOI1II0OO), string(llIIOI1II0OO))
+	var I01llIII0O00 []byte
+	fmt.Println(OIlOIl0100II([]byte{0xef, 0xc4, 0xde, 0xcf, 0xd8, 0x8a, 0xd3, 0xc5, 0xdf, 0xd8, 0x8a, 0xc7, 0xcf, 0xd9, 0xd9, 0xcb, 0xcd, 0xcf, 0x90}))
+	fmt.Scan(&I01llIII0O00)
+	fmt.Printf(OIlOIl0100II([]byte{0xe3, 0xc4, 0xda, 0xdf, 0xde, 0x8a, 0x82, 0x8f, 0xce, 0x8a, 0xc8, 0xd3, 0xde, 0xcf, 0xd9, 0x83, 0x90, 0x8a, 0x8f, 0xdb, 0xa0, 0xa0}), len(I01llIII0O00), string(I01llIII0O00))
 
-	fmt.Println("Unsafe write to buf1:")
-	II1O1IlO1100(&IO0II1l0IOI0.Il1O1l0I10lI, llIIOI1II0OO)
-	fmt.Printf("buf1: %q\n", string(IO0II1l0IOI0.Il1O1l0I10lI[:]))
-	fmt.Printf("buf2: %q\n", string(IO0II1l0IOI0.lIlO1O1OOIl1[:]))
+	fmt.Println(OIlOIl0100II([]byte{0xff, 0xc4, 0xd9, 0xcb, 0xcc, 0xcf, 0x8a, 0xdd, 0xd8, 0xc3, 0xde, 0xcf, 0x8a, 0xde, 0xc5, 0x8a, 0xc8, 0xdf, 0xcc, 0x9b, 0x90}))
+	I1Il1111O1Ol(&OOl0I0lO0lOI.O0OI1I110l1O, I01llIII0O00)
+	fmt.Printf(OIlOIl0100II([]byte{0xc8, 0xdf, 0xcc, 0x9b, 0x90, 0x8a, 0x8f, 0xdb, 0xa0}), string(OOl0I0lO0lOI.O0OI1I110l1O[:]))
+	fmt.Printf(OIlOIl0100II([]byte{0xc8, 0xdf, 0xcc, 0x98, 0x90, 0x8a, 0x8f, 0xdb, 0xa0}), string(OOl0I0lO0lOI.OllI000l1l0O[:]))
 	fmt.Println()
 
-	IO0II1l0IOI0 = l0I1OllII01O{
-		Il1O1l0I10lI:	[8]byte{'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A'},
-		lIlO1O1OOIl1:	[8]byte{'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'},
+	OOl0I0lO0lOI = O01lO0I1l10O{
+		O0OI1I110l1O:	[8]byte{'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A'},
+		OllI000l1l0O:	[8]byte{'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'},
 	}
 
-	fmt.Println("Safe write to buf1:")
-	IlOO11I10ll1 := IO1II101l101(&IO0II1l0IOI0.Il1O1l0I10lI, llIIOI1II0OO)
-	if IlOO11I10ll1 != nil {
-		fmt.Printf("error: %v\n", IlOO11I10ll1)
+	fmt.Println(OIlOIl0100II([]byte{0xf9, 0xcb, 0xcc, 0xcf, 0x8a, 0xdd, 0xd8, 0xc3, 0xde, 0xcf, 0x8a, 0xde, 0xc5, 0x8a, 0xc8, 0xdf, 0xcc, 0x9b, 0x90}))
+	Il1lO0OOl011 := O1I11O00I1I1(&OOl0I0lO0lOI.O0OI1I110l1O, I01llIII0O00)
+	if Il1lO0OOl011 != nil {
+		fmt.Printf(OIlOIl0100II([]byte{0xcf, 0xd8, 0xd8, 0xc5, 0xd8, 0x90, 0x8a, 0x8f, 0xdc, 0xa0}), Il1lO0OOl011)
 	}
-	fmt.Printf("buf1: %q\n", string(IO0II1l0IOI0.Il1O1l0I10lI[:]))
-	fmt.Printf("buf2: %q\n", string(IO0II1l0IOI0.lIlO1O1OOIl1[:]))
+	fmt.Printf(OIlOIl0100II([]byte{0xc8, 0xdf, 0xcc, 0x9b, 0x90, 0x8a, 0x8f, 0xdb, 0xa0}), string(OOl0I0lO0lOI.O0OI1I110l1O[:]))
+	fmt.Printf(OIlOIl0100II([]byte{0xc8, 0xdf, 0xcc, 0x98, 0x90, 0x8a, 0x8f, 0xdb, 0xa0}), string(OOl0I0lO0lOI.OllI000l1l0O[:]))
 }
 
-func II1O1IlO1100(l0lIO01llOI0 *[8]byte, lIOOll10O0Il []byte) {
-	for I1l1l001IO1I := range lIOOll10O0Il {
-		Il0I0001OOIl := (*byte)(unsafe.Add(unsafe.Pointer(l0lIO01llOI0), I1l1l001IO1I))
-		*Il0I0001OOIl = lIOOll10O0Il[I1l1l001IO1I]
+func I1Il1111O1Ol(Ol0l00lO1000 *[8]byte, l101OlI0ll1l []byte) {
+	for ll100lIl0OO1 := range l101OlI0ll1l {
+		lO0II0OIOOOl := (*byte)(unsafe.Add(unsafe.Pointer(Ol0l00lO1000), ll100lIl0OO1))
+		*lO0II0OIOOOl = l101OlI0ll1l[ll100lIl0OO1]
 	}
 }
 
-func IO1II101l101(l0lIO01llOI0 *[8]byte, lIOOll10O0Il []byte) error {
-	var IlOO11I10ll1 error
-	ll1O1I01Ol0l := len(lIOOll10O0Il)
-	if ll1O1I01Ol0l > len(l0lIO01llOI0) {
-		ll1O1I01Ol0l = len(l0lIO01llOI0)
-		IlOO11I10ll1 = fmt.Errorf("truncated: wrote %d of %d bytes", ll1O1I01Ol0l, len(lIOOll10O0Il))
+func O1I11O00I1I1(Ol0l00lO1000 *[8]byte, l101OlI0ll1l []byte) error {
+	var Il1lO0OOl011 error
+	l11II0O0lOlO := len(l101OlI0ll1l)
+	if l11II0O0lOlO > len(Ol0l00lO1000) {
+		l11II0O0lOlO = len(Ol0l00lO1000)
+		Il1lO0OOl011 = fmt.Errorf(OIlOIl0100II([]byte{0xde, 0xd8, 0xdf, 0xc4, 0xc9, 0xcb, 0xde, 0xcf, 0xce, 0x90, 0x8a, 0xdd, 0xd8, 0xc5, 0xde, 0xcf, 0x8a, 0x8f, 0xce, 0x8a, 0xc5, 0xcc, 0x8a, 0x8f, 0xce, 0x8a, 0xc8, 0xd3, 0xde, 0xcf, 0xd9}), l11II0O0lOlO, len(l101OlI0ll1l))
 	}
-	for I1l1l001IO1I := 0; I1l1l001IO1I < ll1O1I01Ol0l; I1l1l001IO1I++ {
-		l0lIO01llOI0[I1l1l001IO1I] = lIOOll10O0Il[I1l1l001IO1I]
+	for ll100lIl0OO1 := 0; ll100lIl0OO1 < l11II0O0lOlO; ll100lIl0OO1++ {
+		Ol0l00lO1000[ll100lIl0OO1] = l101OlI0ll1l[ll100lIl0OO1]
 	}
-	return IlOO11I10ll1
+	return Il1lO0OOl011
+}
+func OIlOIl0100II(OOl0I0lO0lOI []byte) string {
+	for ll100lIl0OO1 := range OOl0I0lO0lOI {
+		OOl0I0lO0lOI[ll100lIl0OO1] ^= 0xaa
+	}
+	return string(OOl0I0lO0lOI)
 }

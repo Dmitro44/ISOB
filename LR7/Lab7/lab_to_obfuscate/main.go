@@ -5,13 +5,6 @@ import (
 	"unsafe"
 )
 
-func decode(b []byte) string {
-	for i := range b {
-		b[i] ^= 0xAA
-	}
-	return string(b)
-}
-
 type Buffers struct {
 	buf1 [8]byte
 	buf2 [8]byte
