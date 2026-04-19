@@ -40,7 +40,7 @@ func attack(id int, wg *sync.WaitGroup) {
 }
 
 func main() {
-	fmt.Printf("Starting Slowloris attack (%d concurrent connections)...\n\n", numConnections)
+	fmt.Printf("Starting Slowloris attack\n\n")
 
 	var wg sync.WaitGroup
 

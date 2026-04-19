@@ -22,7 +22,7 @@ func getVisitor(ip string) *rate.Limiter {
 
 	limiter, exists := visitors[ip]
 	if !exists {
-		limiter = rate.NewLimiter(2, 5)
+		limiter = rate.NewLimiter(2, 3)
 		visitors[ip] = limiter
 	}
 
@@ -50,7 +50,7 @@ func secureMiddleware(next http.Handler) http.Handler {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	host, port, _ := net.SplitHostPort(r.RemoteAddr)
 
 	_, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -59,7 +59,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("Connection established")
+	fmt.Printf("Connection established for %s:%s\n", host, port)
 }
 
 func readBodyHandler(w http.ResponseWriter, r *http.Request) {
