@@ -24,7 +24,6 @@ func attack(id int, wg *sync.WaitGroup) {
 	fmt.Fprintf(conn, "POST / HTTP/1.1\r\n")
 	fmt.Fprintf(conn, "Host: localhost:8080\r\n")
 	fmt.Fprintf(conn, "Content-Length: 15\r\n") // promise 15 bytes
-	// fmt.Fprintf(conn, "Connection: close\r\n")
 	fmt.Fprintf(conn, "\r\n")
 
 	// send 5 bytes
