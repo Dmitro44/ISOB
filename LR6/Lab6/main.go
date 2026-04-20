@@ -72,7 +72,7 @@ func (s *service) runMenu() {
 }
 
 func (s *service) vulnerableSearchUser(r *bufio.Reader) {
-	fmt.Println("\n--- Vulnerable Search (NO PROTECTION) ---")
+	fmt.Println("\n--- Vulnerable Search ---")
 	fmt.Print("Enter search term: ")
 
 	searchTerm, _ := r.ReadString('\n')
@@ -101,7 +101,7 @@ func (s *service) vulnerableSearchUser(r *bufio.Reader) {
 }
 
 func (s *service) secureUserSearch(r *bufio.Reader) {
-	fmt.Println("\n--- Secure user search (PROTECTED) ---")
+	fmt.Println("\n--- Secure user search ---")
 	fmt.Print("Enter search term: ")
 	searchTerm, _ := r.ReadString('\n')
 	searchTerm = "%" + strings.TrimSpace(searchTerm) + "%"
@@ -129,7 +129,7 @@ func (s *service) secureUserSearch(r *bufio.Reader) {
 }
 
 func (s *service) vulnerableLogin(r *bufio.Reader) {
-	fmt.Println("\n--- Vulnerable Login (NO PROTECTION) ---")
+	fmt.Println("\n--- Vulnerable Login ---")
 	fmt.Print("Enter username: ")
 	username, _ := r.ReadString('\n')
 	username = strings.TrimSpace(username)
@@ -153,12 +153,16 @@ func (s *service) vulnerableLogin(r *bufio.Reader) {
 	fmt.Printf("[SUCCESS] User authenticated!\n")
 	fmt.Printf("  ID: %d\n", id)
 	fmt.Printf("  Username: %s\n", dbUsername)
-	fmt.Printf("  Password: %s (has been stolen)\n", dbPassword)
 	fmt.Printf("  Role: %s\n", role)
+
+	if password != dbPassword {
+		fmt.Printf("  [WARNING] SQL Injection detected! You logged in as %s without knowing their password.\n", dbUsername)
+		fmt.Printf("  Stolen Password: %s\n", dbPassword)
+	}
 }
 
 func (s *service) secureLogin(r *bufio.Reader) {
-	fmt.Println("\n--- Secure Login (PROTECTED) ---")
+	fmt.Println("\n--- Secure Login ---")
 	fmt.Print("Enter username: ")
 	username, _ := r.ReadString('\n')
 	username = strings.TrimSpace(username)
@@ -189,7 +193,7 @@ func (s *service) secureLogin(r *bufio.Reader) {
 }
 
 func (s *service) vulnarableDeleteUser(r *bufio.Reader) {
-	fmt.Println("\n--- Vulnerable User Delete (NO PROTECTION) ---")
+	fmt.Println("\n--- Vulnerable User Delete ---")
 	fmt.Print("Enter username: ")
 	username, _ := r.ReadString('\n')
 	username = strings.TrimSpace(username)
@@ -211,7 +215,7 @@ func (s *service) vulnarableDeleteUser(r *bufio.Reader) {
 }
 
 func (s *service) secureDeleteUser(r *bufio.Reader) {
-	fmt.Println("\n--- Secure User Delete (PROTECTED) ---")
+	fmt.Println("\n--- Secure User Delete---")
 	fmt.Print("Enter username: ")
 	username, _ := r.ReadString('\n')
 	username = strings.TrimSpace(username)
